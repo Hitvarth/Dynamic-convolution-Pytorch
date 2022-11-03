@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import time
+import os
 import argparse
 import torchvision.models.vgg
 import torchvision.transforms as transforms
@@ -20,6 +21,8 @@ parser.add_argument('--lr', type=float, default=0.1, )
 parser.add_argument('--momentum', type=float, default=0.9)
 parser.add_argument('--weight-decay', type=float, default=1e-4)
 parser.add_argument('--net-name', default='vgg16_bn')
+parser.add_argument('--save_freq', type=int, default=10)
+parser.add_argument('--save_dir', type=str, default='./save')
 
 args = parser.parse_args()
 args.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
@@ -122,9 +125,22 @@ def val(epoch):
 
 
 best_val_acc=0.
+save_dir = args.save_dir
+os.makedirs(save_dir, exist_ok=False)
 for i in range(args.epochs):
     train(i+1)
     temp_acc = val(i+1)
     if temp_acc>best_val_acc:
         best_val_acc = temp_acc
+        torch.save({
+            'epoch': i+1,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            }, os.path.join(save_dir, 'model_best.pth'))
+    if (i+1)%args.save_freq==0:
+        torch.save({
+            'epoch': i+1,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            }, os.path.join(save_dir, f'model_{i+1}.pth'))
 print('Best acc{}'.format(best_val_acc))
